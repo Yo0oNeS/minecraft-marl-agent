@@ -1,0 +1,17 @@
+# Ignore the Minecraft Game Engine
+Malmo/
+
+# Ignore the Python Virtual Environment
+venv/
+
+# Ignore Python compilation files
+__pycache__/
+*.pyc
+
+# Ignore VS Code settings
+.vscode/
+
+# Keep these specific files even though they are binaries
+!MalmoPython.pyd
+!zlib.dll
+!MalmoPython.lib
