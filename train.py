@@ -5,14 +5,15 @@ import numpy as np
 from marl_env import MARLEnvironment
 from model import PPOAgent, preprocess_obs
 import os
+import csv
 
 # --- HYPERPARAMETERS ---
 LR = 0.002              # Learning Rate (How fast we learn)
 GAMMA = 0.99            # Discount Factor (Future rewards vs immediate rewards)
 K_EPOCHS = 4            # How many times we update per batch
 EPS_CLIP = 0.2          # PPO Clipping (Prevents drastic changes)
-MAX_EPISODES = 2        # Total games to play
-UPDATE_TIMESTEP = 10    # Update the brain every X steps
+MAX_EPISODES = 300      # Total games to play
+UPDATE_TIMESTEP = 200   # Update the brain every X steps
 
 device = torch.device('cpu') # Using CPU is fine for this model size, keeps it simple.
 
@@ -138,8 +139,13 @@ def train():
     
     miner_memory = Memory()
     collector_memory = Memory()
+
     
     print("Starting Training...")
+    # Open log file
+    log_f = open("training_log.csv", "w", newline="")
+    log_writer = csv.writer(log_f)
+    log_writer.writerow(["episode", "total_reward", "steps"])
     time_step = 0
     
     for i_episode in range(1, MAX_EPISODES+1):
@@ -190,6 +196,10 @@ def train():
                 break
                 
         print(f"Episode {i_episode} finished. Total Reward: {current_ep_reward:.2f}")
+
+        # Log to CSV
+        log_writer.writerow([i_episode, current_ep_reward, t])
+        log_f.flush() # Ensure data is written immediately
         
         # Save occasionally
         if i_episode % 10 == 0:

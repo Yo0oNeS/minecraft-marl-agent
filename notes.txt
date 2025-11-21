@@ -1,0 +1,3 @@
+- Miner agent needs more tasks, he barely doing something.
+- Would we apply the next step on the trained model, or a new one ?
+- What type of training we applied ? whould we use MineRL ? Where is imitation ?
