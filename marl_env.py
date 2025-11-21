@@ -31,8 +31,7 @@ class MARLEnvironment:
             return f.read()
 
     def _start_agent_mission(self, role_index, mission_spec, experimentID):
-        # 1. Create a UNIQUE ClientPool for this thread (Matches debug script logic)
-        # Use 127.0.0.1 because you enabled the IPv4 flag in Java
+        # 1. Create INTERNAL ClientPool (Robust Logic)
         pool = MalmoPython.ClientPool()
         pool.add(MalmoPython.ClientInfo("127.0.0.1", 10000))
         pool.add(MalmoPython.ClientInfo("127.0.0.1", 10001))
@@ -42,7 +41,7 @@ class MARLEnvironment:
         
         # Stagger: Agent 1 waits for Agent 0
         if role_index == 1:
-            time.sleep(5) # Increased to 5s to be safe
+            time.sleep(5)
             
         max_retries = 5
         for retry in range(max_retries):
@@ -57,11 +56,17 @@ class MARLEnvironment:
         logging.error(f"Role {role_index} GIVING UP.")
         raise RuntimeError(f"Could not connect Role {role_index}")
 
-    def reset(self):
+    def reset(self, custom_xml=None):
         # 1. Create FRESH AgentHosts
         self.agent_hosts = [MalmoPython.AgentHost(), MalmoPython.AgentHost()]
 
-        xml_content = self._load_mission_xml()
+        # 2. Determine XML
+        if custom_xml:
+            xml_content = custom_xml
+            logging.info("Loading CUSTOM Randomized Level...")
+        else:
+            xml_content = self._load_mission_xml()
+
         try:
             my_mission = MalmoPython.MissionSpec(xml_content, True)
         except RuntimeError as e:
@@ -71,9 +76,10 @@ class MARLEnvironment:
         experimentID = str(time.time())
         logging.info(f"Resetting Environment (ID: {experimentID})...")
 
-        # 2. Launch Threads
+        # 3. Launch Connection Threads
         threads = []
         for i in range(2):
+            # FIX: Removed 'pool' from args to match function definition
             t = threading.Thread(target=self._start_agent_mission, args=(i, my_mission, experimentID))
             t.start()
             threads.append(t)
@@ -81,7 +87,7 @@ class MARLEnvironment:
         for t in threads:
             t.join()
 
-        # 3. Wait for Start
+        # 4. Wait for Start
         logging.info("Waiting for mission to load...")
         has_begun = False
         timeout = 0
@@ -101,12 +107,11 @@ class MARLEnvironment:
             raise RuntimeError("Mission Start Timeout")
 
         logging.info("Mission Started! Cleaning up...")
-        # Try/Except block for commands in case chat isn't ready
         try:
             self.agent_hosts[0].sendCommand("chat /kill @e[type=item]")
             self.agent_hosts[1].sendCommand("chat /clear")
         except:
-            logging.warning("Could not send cleanup commands (Chat not ready?)")
+            logging.warning("Could not send cleanup commands")
             
         time.sleep(1)
         return self._get_obs()
