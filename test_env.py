@@ -1,44 +1,51 @@
 from marl_env import MARLEnvironment
-import random
 import time
 
-# 1. Initialize
-env = MARLEnvironment()
-
-# 2. Reset (Connects to clients)
-print("Resetting environment...")
-obs = env.reset()
-print("Environment Ready!")
-
-if obs[0] is None or obs[1] is None:
-    print("Warning: Initial observations are empty.")
-
-# 3. Run a loop (The "Game Loop")
-print("Starting Step Loop (Running for 10 steps)...")
-try:
-    for step in range(10):
-        # Pick random actions
-        # Miner (0): Randomly move (1) or turn (3,4)
-        act0 = random.choice([0, 1, 3, 4])
-        # Collector (1): Randomly move (1) or turn (3,4)
-        act1 = random.choice([0, 1, 3, 4])
+def run_winning_sequence():
+    env = MARLEnvironment()
+    print("Resetting...")
+    env.reset()
+    
+    print("Executing Scripted Win...")
+    
+    # We will construct a sequence of actions to force a win.
+    # Actions Mapping: 0:Stop, 1:Fwd, 2:Back, 3:Right, 4:Left, 5:Drop
+    
+    # SEQUENCE:
+    # 1. Miner (0) looks down (We can't pitch via simple actions yet, assumes pre-set or ignores pitch)
+    #    Wait! Our current action list doesn't have "Pitch". 
+    #    In RL, we usually simplify by removing pitch and just letting them drop forward.
+    #    Let's see if "discardCurrentItem" works without looking down. (It usually throws it forward).
+    
+    steps = []
+    
+    # Step 1: Miner Drops (Action 5), Collector Waits (Action 0)
+    steps.append([5, 0])
+    
+    # Step 2: Miner Backs Up (Action 2), Collector Waits (Action 0)
+    steps.append([2, 0])
+    steps.append([2, 0]) # Back up more
+    
+    # Step 3: Collector Moves Forward (Action 1) into the diamond
+    for _ in range(6): # 6 steps forward
+        steps.append([0, 1])
         
-        actions = [act0, act1]
-        
-        print(f"Step {step}: Actions {actions}")
-        
-        # Execute Step
+    # Execute the list
+    total_reward = 0
+    for i, actions in enumerate(steps):
+        print(f"Step {i}: Actions {actions}")
         obs, rewards, done, info = env.step(actions)
-        
-        # Debug print
-        if obs[0]:
-            print(f" - Miner Pos: {obs[0].get('XPos', 0):.2f}, {obs[0].get('ZPos', 0):.2f}")
+        total_reward += sum(rewards)
         
         if done:
-            print("Mission ended early.")
+            print("Mission Done Triggered!")
             break
             
-except KeyboardInterrupt:
-    print("Stopped by user.")
+    print(f"Total Reward: {total_reward}")
+    if total_reward > 50:
+        print("TEST PASSED: High reward received.")
+    else:
+        print("TEST FAILED: Diamond not detected or not reached.")
 
-print("Test Complete.")
+if __name__ == "__main__":
+    run_winning_sequence()

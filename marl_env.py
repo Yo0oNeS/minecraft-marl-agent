@@ -103,14 +103,7 @@ class MARLEnvironment:
 
     def step(self, action_indices):
         """
-        Executes actions for both agents.
-        Args:
-            action_indices: List [int, int] e.g. [1, 0] (Miner moves, Collector stops)
-        Returns:
-            obs: List of JSON dicts
-            rewards: List of floats (Placeholder for now)
-            done: bool
-            info: dict
+        Executes actions, calculates rewards, checks done.
         """
         # 1. Send Commands
         for i, action_idx in enumerate(action_indices):
@@ -118,22 +111,41 @@ class MARLEnvironment:
             self.agent_hosts[i].sendCommand(cmd)
 
         # 2. Wait (The "Tick")
-        # In RL, we need discrete steps. We assume 1 step = 0.5 seconds of real time.
         time.sleep(0.5)
 
         # 3. Get New State
         obs = self._get_obs()
         
-        # 4. Calculate Rewards (Placeholder for Phase 2)
-        rewards = [0, 0]
-        
-        # 5. Check Done
-        # For now, we rely on the mission timing out, or if observations stop
+        # 4. Calculate Rewards & Done
+        rewards = [-0.1, -0.1] # Small time penalty for every step
         done = False
+        
+        # Check if Collector (Agent 1) has the diamond
+        if self._check_if_collector_has_diamond(obs[1]):
+            print("\n>>> DIAMOND HANDOFF SUCCESS! REWARD +100 <<<")
+            rewards = [100.0, 100.0] # Both agents share the victory
+            done = True
+        
+        # Check if mission timed out naturally
         if not self.agent_hosts[0].getWorldState().is_mission_running:
             done = True
 
         return obs, rewards, done, {}
+
+    def _check_if_collector_has_diamond(self, obs_json):
+        """
+        Parses the Collector's JSON observation to find a diamond.
+        """
+        if obs_json is None:
+            return False
+            
+        # Scan up to 40 slots
+        for i in range(40):
+            key = f"InventorySlot_{i}_item"
+            if key in obs_json:
+                if obs_json[key] == 'diamond':
+                    return True
+        return False
 
     def _get_obs(self):
         """
